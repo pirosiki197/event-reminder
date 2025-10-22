@@ -1,228 +1,103 @@
 import { create } from 'zustand';
-import { eventApi, eventTemplateApi, slackApi, taskTemplateApi } from '../api/mock';
+import { defaultTaskApi, eventApi, holdingApi, holdingTaskApi, traqApi } from '../api/api';
 import type {
-  EventTemplate,
-  EventTemplateWithTasks,
-  EventWithTemplate,
-  SlackChannel,
+  Event,
+  EventWithTasks,
+  HoldingWithEvent,
+  HoldingWithTasks,
+  TraQChannel,
 } from '../types';
 
 interface AppState {
   // データ
-  templates: EventTemplate[];
-  currentTemplate: EventTemplateWithTasks | null;
-  events: EventWithTemplate[];
-  slackChannels: SlackChannel[];
+  events: Event[];
+  currentEvent: EventWithTasks | null;
+  holdings: HoldingWithEvent[];
+  currentHolding: HoldingWithTasks | null;
+  traQChannels: TraQChannel[];
 
   // ローディング状態
   isLoading: boolean;
 
-  // アクション: テンプレート
-  fetchTemplates: () => Promise<void>;
-  searchTemplates: (query: string) => Promise<void>;
-  fetchTemplateById: (templateId: string) => Promise<void>;
-  createTemplate: (name: string) => Promise<EventTemplate>;
-  updateTemplate: (templateId: string, name: string) => Promise<void>;
-  deleteTemplate: (templateId: string) => Promise<void>;
+  // アクション: イベント (旧: テンプレート)
+  fetchEvents: () => Promise<void>;
+  searchEvents: (query: string) => Promise<void>;
+  fetchEventById: (eventId: string) => Promise<void>;
+  createEvent: (name: string) => Promise<Event>;
+  updateEvent: (eventId: string, name: string) => Promise<void>;
+  deleteEvent: (eventId: string) => Promise<void>;
 
-  // アクション: タスク
-  createTask: (task: {
-    template_id: string;
-    task_name: string;
-    days_before: number;
+  // アクション: デフォルトタスク (旧: タスクテンプレート)
+  createDefaultTask: (task: {
+    eventId: string;
+    name: string;
+    daysBefore: number;
     description: string;
   }) => Promise<void>;
-  updateTask: (
+  updateDefaultTask: (
     taskId: string,
     updates: {
-      task_name?: string;
-      days_before?: number;
+      name?: string;
+      daysBefore?: number;
       description?: string;
     }
   ) => Promise<void>;
-  deleteTask: (taskId: string) => Promise<void>;
+  deleteDefaultTask: (taskId: string) => Promise<void>;
 
-  // アクション: イベント
-  fetchEvents: () => Promise<void>;
-  fetchEventsByTemplateId: (templateId: string) => Promise<void>;
-  createEvent: (event: {
-    event_name: string;
-    template_id: string;
-    event_date: string;
-    slack_channel_id: string;
-    slack_mention: string;
+  // アクション: 開催 (旧: イベント)
+  fetchHoldings: () => Promise<void>;
+  fetchHoldingsByEventId: (eventId: string) => Promise<void>;
+  fetchHoldingById: (holdingId: string) => Promise<void>;
+  createHolding: (holding: {
+    name: string;
+    eventId: string;
+    date: string;
+    channelId: string;
+    mention: string;
   }) => Promise<void>;
-  updateEvent: (
-    eventId: string,
+  updateHolding: (
+    holdingId: string,
     updates: {
-      event_name?: string;
-      template_id?: string;
-      event_date?: string;
-      slack_channel_id?: string;
-      slack_mention?: string;
+      name?: string;
+      eventId?: string;
+      date?: string;
+      channelId?: string;
+      mention?: string;
     }
   ) => Promise<void>;
-  deleteEvent: (eventId: string) => Promise<void>;
+  deleteHolding: (holdingId: string) => Promise<void>;
+
+  // アクション: 開催タスク (新規)
+  createHoldingTask: (task: {
+    holdingId: string;
+    name: string;
+    daysBefore: number;
+    description: string;
+  }) => Promise<void>;
+  updateHoldingTask: (
+    taskId: string,
+    updates: {
+      name?: string;
+      daysBefore?: number;
+      description?: string;
+    }
+  ) => Promise<void>;
+  deleteHoldingTask: (taskId: string) => Promise<void>;
 
   // アクション: Slack
-  fetchSlackChannels: () => Promise<void>;
+  fetchTraQChannels: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
   // 初期状態
-  templates: [],
-  currentTemplate: null,
   events: [],
-  slackChannels: [],
+  currentEvent: null,
+  holdings: [],
+  currentHolding: null,
+  traQChannels: [],
   isLoading: false,
 
-  // テンプレート関連
-  fetchTemplates: async () => {
-    set({ isLoading: true });
-    try {
-      const templates = await eventTemplateApi.getAll();
-      set({ templates, isLoading: false });
-    } catch (error) {
-      console.error('Failed to fetch templates:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  searchTemplates: async (query: string) => {
-    set({ isLoading: true });
-    try {
-      const templates = await eventTemplateApi.search(query);
-      set({ templates, isLoading: false });
-    } catch (error) {
-      console.error('Failed to search templates:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  fetchTemplateById: async (templateId: string) => {
-    set({ isLoading: true });
-    try {
-      const template = await eventTemplateApi.getById(templateId);
-      set({ currentTemplate: template, isLoading: false });
-    } catch (error) {
-      console.error('Failed to fetch template:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  createTemplate: async (name: string) => {
-    set({ isLoading: true });
-    try {
-      const newTemplate = await eventTemplateApi.create(name);
-      set((state) => ({
-        templates: [...state.templates, newTemplate],
-        isLoading: false,
-      }));
-      return newTemplate;
-    } catch (error) {
-      console.error('Failed to create template:', error);
-      set({ isLoading: false });
-      throw error;
-    }
-  },
-
-  updateTemplate: async (templateId: string, name: string) => {
-    set({ isLoading: true });
-    try {
-      const updated = await eventTemplateApi.update(templateId, name);
-      if (updated) {
-        set((state) => ({
-          templates: state.templates.map((t) => (t.template_id === templateId ? updated : t)),
-          currentTemplate:
-            state.currentTemplate?.template_id === templateId
-              ? { ...state.currentTemplate, template_name: name }
-              : state.currentTemplate,
-          isLoading: false,
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to update template:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  deleteTemplate: async (templateId: string) => {
-    set({ isLoading: true });
-    try {
-      await eventTemplateApi.delete(templateId);
-      set((state) => ({
-        templates: state.templates.filter((t) => t.template_id !== templateId),
-        currentTemplate:
-          state.currentTemplate?.template_id === templateId ? null : state.currentTemplate,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to delete template:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  // タスク関連
-  createTask: async (task) => {
-    set({ isLoading: true });
-    try {
-      const newTask = await taskTemplateApi.create(task);
-      set((state) => ({
-        currentTemplate: state.currentTemplate
-          ? {
-              ...state.currentTemplate,
-              tasks: [...state.currentTemplate.tasks, newTask],
-            }
-          : null,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to create task:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  updateTask: async (taskId, updates) => {
-    set({ isLoading: true });
-    try {
-      const updated = await taskTemplateApi.update(taskId, updates);
-      if (updated) {
-        set((state) => ({
-          currentTemplate: state.currentTemplate
-            ? {
-                ...state.currentTemplate,
-                tasks: state.currentTemplate.tasks.map((t) => (t.task_id === taskId ? updated : t)),
-              }
-            : null,
-          isLoading: false,
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to update task:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  deleteTask: async (taskId) => {
-    set({ isLoading: true });
-    try {
-      await taskTemplateApi.delete(taskId);
-      set((state) => ({
-        currentTemplate: state.currentTemplate
-          ? {
-              ...state.currentTemplate,
-              tasks: state.currentTemplate.tasks.filter((t) => t.task_id !== taskId),
-            }
-          : null,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to delete task:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  // イベント関連
+  // イベント関連 (旧: テンプレート)
   fetchEvents: async () => {
     set({ isLoading: true });
     try {
@@ -234,49 +109,71 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  fetchEventsByTemplateId: async (templateId: string) => {
+  searchEvents: async (query: string) => {
     set({ isLoading: true });
     try {
-      const events = await eventApi.getByTemplateId(templateId);
+      const events = await eventApi.getAll(query);
       set({ events, isLoading: false });
     } catch (error) {
-      console.error('Failed to fetch events:', error);
+      console.error('Failed to search events:', error);
       set({ isLoading: false });
     }
   },
 
-  createEvent: async (event) => {
+  fetchEventById: async (eventId: string) => {
     set({ isLoading: true });
     try {
-      const _newEvent = await eventApi.create(event);
-      // イベント一覧を再取得
-      await get().fetchEventsByTemplateId(event.template_id);
+      const event = await eventApi.getById(eventId);
+      set({ currentEvent: event, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch event:', error);
       set({ isLoading: false });
+    }
+  },
+
+  createEvent: async (name: string) => {
+    set({ isLoading: true });
+    try {
+      const newEvent = await eventApi.create(name);
+      set((state) => ({
+        events: [...state.events, newEvent],
+        isLoading: false,
+      }));
+      return newEvent;
     } catch (error) {
       console.error('Failed to create event:', error);
       set({ isLoading: false });
+      throw error;
     }
   },
 
-  updateEvent: async (eventId, updates) => {
+  updateEvent: async (eventId: string, name: string) => {
     set({ isLoading: true });
     try {
-      await eventApi.update(eventId, updates);
-      // イベント一覧を再取得
-      const events = await eventApi.getAll();
-      set({ events, isLoading: false });
+      const updated = await eventApi.update(eventId, name);
+      if (updated) {
+        set((state) => ({
+          events: state.events.map((e) => (e.id === eventId ? updated : e)),
+          currentEvent:
+            state.currentEvent?.id === eventId
+              ? { ...state.currentEvent, name: name }
+              : state.currentEvent,
+          isLoading: false,
+        }));
+      }
     } catch (error) {
       console.error('Failed to update event:', error);
       set({ isLoading: false });
     }
   },
 
-  deleteEvent: async (eventId) => {
+  deleteEvent: async (eventId: string) => {
     set({ isLoading: true });
     try {
       await eventApi.delete(eventId);
       set((state) => ({
-        events: state.events.filter((e) => e.event_id !== eventId),
+        events: state.events.filter((e) => e.id !== eventId),
+        currentEvent: state.currentEvent?.id === eventId ? null : state.currentEvent,
         isLoading: false,
       }));
     } catch (error) {
@@ -285,12 +182,207 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Slack関連
-  fetchSlackChannels: async () => {
+  // デフォルトタスク関連 (旧: タスクテンプレート)
+  createDefaultTask: async (task) => {
     set({ isLoading: true });
     try {
-      const channels = await slackApi.getChannels();
-      set({ slackChannels: channels, isLoading: false });
+      const newTask = await defaultTaskApi.create(task);
+      set((state) => ({
+        currentEvent: state.currentEvent
+          ? {
+              ...state.currentEvent,
+              tasks: [...state.currentEvent.tasks, newTask],
+            }
+          : null,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to create default task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  updateDefaultTask: async (taskId, updates) => {
+    set({ isLoading: true });
+    try {
+      const updated = await defaultTaskApi.update(taskId, updates);
+      if (updated) {
+        set((state) => ({
+          currentEvent: state.currentEvent
+            ? {
+                ...state.currentEvent,
+                tasks: state.currentEvent.tasks.map((t) => (t.id === taskId ? updated : t)),
+              }
+            : null,
+          isLoading: false,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update default task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  deleteDefaultTask: async (taskId) => {
+    set({ isLoading: true });
+    try {
+      await defaultTaskApi.delete(taskId);
+      set((state) => ({
+        currentEvent: state.currentEvent
+          ? {
+              ...state.currentEvent,
+              tasks: state.currentEvent.tasks.filter((t) => t.id !== taskId),
+            }
+          : null,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to delete default task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  // 開催関連 (旧: イベント)
+  fetchHoldings: async () => {
+    set({ isLoading: true });
+    try {
+      const holdings = await holdingApi.getAll();
+      set({ holdings, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch holdings:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  fetchHoldingsByEventId: async (eventId: string) => {
+    set({ isLoading: true });
+    try {
+      const holdings = await holdingApi.getAll(eventId);
+      set({ holdings, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch holdings:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  fetchHoldingById: async (holdingId: string) => {
+    set({ isLoading: true });
+    try {
+      const holding = await holdingApi.getById(holdingId);
+      set({ currentHolding: holding, isLoading: false });
+    } catch (error) {
+      console.error('Failed to fetch holding:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  createHolding: async (holding) => {
+    set({ isLoading: true });
+    try {
+      const _newHolding = await holdingApi.create(holding);
+      // 開催一覧を再取得
+      await get().fetchHoldingsByEventId(holding.eventId);
+      set({ isLoading: false });
+    } catch (error) {
+      console.error('Failed to create holding:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  updateHolding: async (holdingId, updates) => {
+    set({ isLoading: true });
+    try {
+      await holdingApi.update(holdingId, updates);
+      // 開催一覧を再取得
+      const holdings = await holdingApi.getAll();
+      set({ holdings, isLoading: false });
+    } catch (error) {
+      console.error('Failed to update holding:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  deleteHolding: async (holdingId) => {
+    set({ isLoading: true });
+    try {
+      await holdingApi.delete(holdingId);
+      set((state) => ({
+        holdings: state.holdings.filter((h) => h.id !== holdingId),
+        currentHolding: state.currentHolding?.id === holdingId ? null : state.currentHolding,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to delete holding:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  // 開催タスク関連 (新規)
+  createHoldingTask: async (task) => {
+    set({ isLoading: true });
+    try {
+      const newTask = await holdingTaskApi.create(task);
+      set((state) => ({
+        currentHolding: state.currentHolding
+          ? {
+              ...state.currentHolding,
+              tasks: [...state.currentHolding.tasks, newTask],
+            }
+          : null,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to create holding task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  updateHoldingTask: async (taskId, updates) => {
+    set({ isLoading: true });
+    try {
+      const updated = await holdingTaskApi.update(taskId, updates);
+      if (updated) {
+        set((state) => ({
+          currentHolding: state.currentHolding
+            ? {
+                ...state.currentHolding,
+                tasks: state.currentHolding.tasks.map((t) => (t.id === taskId ? updated : t)),
+              }
+            : null,
+          isLoading: false,
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update holding task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  deleteHoldingTask: async (taskId) => {
+    set({ isLoading: true });
+    try {
+      await holdingTaskApi.delete(taskId);
+      set((state) => ({
+        currentHolding: state.currentHolding
+          ? {
+              ...state.currentHolding,
+              tasks: state.currentHolding.tasks.filter((t) => t.id !== taskId),
+            }
+          : null,
+        isLoading: false,
+      }));
+    } catch (error) {
+      console.error('Failed to delete holding task:', error);
+      set({ isLoading: false });
+    }
+  },
+
+  // Slack関連
+  fetchTraQChannels: async () => {
+    set({ isLoading: true });
+    try {
+      const channels = await traqApi.getChannels();
+      set({ traQChannels: channels, isLoading: false });
     } catch (error) {
       console.error('Failed to fetch slack channels:', error);
       set({ isLoading: false });

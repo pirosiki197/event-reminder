@@ -6,29 +6,29 @@ import { Card } from '../components/Card';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useAppStore } from '../store';
 
-export const EventList: React.FC = () => {
-  const { templateId } = useParams<{ templateId: string }>();
+export const HoldingList: React.FC = () => {
+  const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const { currentTemplate, events, isLoading, fetchTemplateById, fetchEventsByTemplateId } =
+  const { currentEvent, holdings, isLoading, fetchEventById, fetchHoldingsByEventId } =
     useAppStore();
 
   const [filter, setFilter] = useState<'upcoming' | 'past'>('upcoming');
 
   useEffect(() => {
-    if (templateId) {
-      fetchTemplateById(templateId);
-      fetchEventsByTemplateId(templateId);
+    if (eventId) {
+      fetchEventById(eventId);
+      fetchHoldingsByEventId(eventId);
     }
-  }, [templateId, fetchTemplateById, fetchEventsByTemplateId]);
+  }, [eventId, fetchEventById, fetchHoldingsByEventId]);
 
-  if (!templateId) {
-    return <div>テンプレートIDが指定されていません</div>;
+  if (!eventId) {
+    return <div>イベントIDが指定されていません</div>;
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingEvents = events.filter((e) => e.event_date >= today);
-  const pastEvents = events.filter((e) => e.event_date < today);
-  const displayEvents = filter === 'upcoming' ? upcomingEvents : pastEvents;
+  const upcomingHoldings = holdings.filter((h) => h.date >= today);
+  const pastHoldings = holdings.filter((h) => h.date < today);
+  const displayHoldings = filter === 'upcoming' ? upcomingHoldings : pastHoldings;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,12 +54,12 @@ export const EventList: React.FC = () => {
               </svg>
             </button>
             <h1 className="text-3xl font-bold text-gray-900">
-              {currentTemplate?.template_name || 'Loading...'}
+              {currentEvent?.name || 'Loading...'}
             </h1>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => navigate(`/templates/${templateId}/edit`)}>
-              テンプレートを編集
+            <Button variant="secondary" onClick={() => navigate(`/events/${eventId}/edit`)}>
+              イベントを編集
             </Button>
           </div>
         </div>
@@ -67,14 +67,14 @@ export const EventList: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Create Event Button */}
+        {/* Create Holding Button */}
         <div className="mb-8">
           <Button
             size="lg"
-            onClick={() => navigate(`/templates/${templateId}/events/new`)}
+            onClick={() => navigate(`/events/${eventId}/holdings/new`)}
             className="w-full sm:w-auto"
           >
-            + このテンプレートで新しいイベントを登録する
+            + 追加
           </Button>
         </div>
 
@@ -90,7 +90,7 @@ export const EventList: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              開催予定 ({upcomingEvents.length})
+              開催予定 ({upcomingHoldings.length})
             </button>
             <button
               type="button"
@@ -101,41 +101,39 @@ export const EventList: React.FC = () => {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              開催済み ({pastEvents.length})
+              開催済み ({pastHoldings.length})
             </button>
           </div>
         </div>
 
-        {/* Events List */}
+        {/* Holdings List */}
         {isLoading ? (
           <LoadingSpinner />
-        ) : displayEvents.length === 0 ? (
+        ) : displayHoldings.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
-              {filter === 'upcoming'
-                ? '開催予定のイベントがありません'
-                : '開催済みのイベントがありません'}
+              {filter === 'upcoming' ? '開催予定がありません' : '開催済みがありません'}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {displayEvents.map((event) => (
-              <Card key={event.event_id} onClick={() => navigate(`/events/${event.event_id}`)}>
+            {displayHoldings.map((holding) => (
+              <Card key={holding.id} onClick={() => navigate(`/holdings/${holding.id}`)}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{event.event_name}</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{holding.name}</h3>
                     <div className="space-y-1 text-sm text-gray-600">
                       <p>
                         📅 開催日:{' '}
                         <span className="font-medium">
-                          {new Date(event.event_date).toLocaleDateString('ja-JP', {
+                          {new Date(holding.date).toLocaleDateString('ja-JP', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
                           })}
                         </span>
                       </p>
-                      <p>💬 通知先: {event.slack_mention}</p>
+                      <p>💬 通知先: {holding.mention}</p>
                     </div>
                   </div>
                   <svg

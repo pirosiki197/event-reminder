@@ -1,79 +1,129 @@
 import type React from 'react';
 import { useEffect, useState } from 'react';
+import DatePicker from 'react-datepicker';
 import { useNavigate, useParams } from 'react-router-dom';
+import 'react-datepicker/dist/react-datepicker.css';
 import { Button } from '../components/Button';
 import { Input, Textarea } from '../components/Form';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Modal } from '../components/Modal';
+import { SearchableSelect } from '../components/SearchableSelect';
 import { useAppStore } from '../store';
-import type { TaskTemplate } from '../types';
+import type { HoldingTask } from '../types';
 
-export const TemplateEdit: React.FC = () => {
-  const { templateId } = useParams<{ templateId: string }>();
+export const HoldingEdit: React.FC = () => {
+  const { holdingId } = useParams<{ holdingId: string }>();
   const navigate = useNavigate();
   const {
-    currentTemplate,
+    currentHolding,
+    traQChannels,
     isLoading,
-    fetchTemplateById,
-    updateTemplate,
-    deleteTemplate,
-    createTask,
-    updateTask,
-    deleteTask,
+    fetchHoldingById,
+    fetchTraQChannels,
+    updateHolding,
+    deleteHolding,
+    createHoldingTask,
+    updateHoldingTask,
+    deleteHoldingTask,
   } = useAppStore();
 
-  const [templateName, setTemplateName] = useState('');
-  const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false);
+  const [isEditInfoModalOpen, setIsEditInfoModalOpen] = useState(false);
+  const [holdingFormData, setHoldingFormData] = useState({
+    name: '',
+    date: new Date(),
+    channelId: '',
+    mention: '',
+  });
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<TaskTemplate | null>(null);
+  const [editingTask, setEditingTask] = useState<HoldingTask | null>(null);
   const [taskFormData, setTaskFormData] = useState({
-    task_name: '',
-    days_before: 0,
+    name: '',
+    daysBefore: 0,
     description: '',
   });
 
   useEffect(() => {
-    if (templateId) {
-      fetchTemplateById(templateId);
+    if (holdingId) {
+      fetchHoldingById(holdingId);
     }
-  }, [templateId, fetchTemplateById]);
+    fetchTraQChannels();
+  }, [holdingId, fetchHoldingById, fetchTraQChannels]);
 
   useEffect(() => {
-    if (currentTemplate) {
-      setTemplateName(currentTemplate.template_name);
+    if (currentHolding) {
+      setHoldingFormData({
+        name: currentHolding.name,
+        date: new Date(currentHolding.date),
+        channelId: currentHolding.channelId,
+        mention: currentHolding.mention,
+      });
     }
-  }, [currentTemplate]);
+  }, [currentHolding]);
 
-  if (!templateId) {
-    return <div>テンプレートIDが指定されていません</div>;
+  if (!holdingId) {
+    return <div>開催IDが指定されていません</div>;
   }
 
-  const handleUpdateTemplateName = async () => {
-    if (templateName.trim() === '') return;
-    await updateTemplate(templateId, templateName);
-    setIsEditNameModalOpen(false);
+  const openEditInfoModal = () => {
+    if (currentHolding) {
+      setHoldingFormData({
+        name: currentHolding.name,
+        date: new Date(currentHolding.date),
+        channelId: currentHolding.channelId,
+        mention: currentHolding.mention,
+      });
+      setIsEditInfoModalOpen(true);
+    }
   };
 
-  const handleDeleteTemplate = async () => {
-    if (window.confirm('このテンプレートを削除してもよろしいですか?')) {
-      await deleteTemplate(templateId);
+  const handleUpdateHoldingInfo = async () => {
+    if (holdingFormData.name.trim() === '') {
+      alert('開催名を入力してください');
+      return;
+    }
+
+    if (!holdingFormData.channelId) {
+      alert('通知先チャンネルを選択してください');
+      return;
+    }
+
+    if (holdingFormData.mention.trim() === '') {
+      alert('メンション先を入力してください');
+      return;
+    }
+
+    if (currentHolding) {
+      await updateHolding(holdingId, {
+        name: holdingFormData.name,
+        eventId: currentHolding.eventId || '',
+        date: holdingFormData.date.toISOString().split('T')[0],
+        channelId: holdingFormData.channelId,
+        mention: holdingFormData.mention,
+      });
+    }
+    setIsEditInfoModalOpen(false);
+  };
+
+  const handleDeleteHolding = async () => {
+    if (window.confirm('この開催を削除してもよろしいですか?')) {
+      await deleteHolding(holdingId);
       navigate('/');
     }
   };
 
-  const openTaskModal = (task?: TaskTemplate) => {
+  const openTaskModal = (task?: HoldingTask) => {
     if (task) {
       setEditingTask(task);
       setTaskFormData({
-        task_name: task.task_name,
-        days_before: task.days_before,
+        name: task.name,
+        daysBefore: task.daysBefore,
         description: task.description,
       });
     } else {
       setEditingTask(null);
       setTaskFormData({
-        task_name: '',
-        days_before: 0,
+        name: '',
+        daysBefore: 0,
         description: '',
       });
     }
@@ -84,23 +134,23 @@ export const TemplateEdit: React.FC = () => {
     setIsTaskModalOpen(false);
     setEditingTask(null);
     setTaskFormData({
-      task_name: '',
-      days_before: 0,
+      name: '',
+      daysBefore: 0,
       description: '',
     });
   };
 
   const handleSaveTask = async () => {
-    if (taskFormData.task_name.trim() === '' || taskFormData.days_before <= 0) {
+    if (taskFormData.name.trim() === '' || taskFormData.daysBefore <= 0) {
       alert('タスク名と日数を正しく入力してください');
       return;
     }
 
     if (editingTask) {
-      await updateTask(editingTask.task_id, taskFormData);
+      await updateHoldingTask(editingTask.id, taskFormData);
     } else {
-      await createTask({
-        template_id: templateId,
+      await createHoldingTask({
+        holdingId: holdingId,
         ...taskFormData,
       });
     }
@@ -109,16 +159,16 @@ export const TemplateEdit: React.FC = () => {
 
   const handleDeleteTask = async (taskId: string) => {
     if (window.confirm('このタスクを削除してもよろしいですか?')) {
-      await deleteTask(taskId);
+      await deleteHoldingTask(taskId);
     }
   };
 
-  if (isLoading && !currentTemplate) {
+  if (isLoading && !currentHolding) {
     return <LoadingSpinner />;
   }
 
-  const sortedTasks = currentTemplate?.tasks
-    ? [...currentTemplate.tasks].sort((a, b) => b.days_before - a.days_before)
+  const sortedTasks = currentHolding?.tasks
+    ? [...currentHolding.tasks].sort((a, b) => b.daysBefore - a.daysBefore)
     : [];
 
   return (
@@ -129,7 +179,7 @@ export const TemplateEdit: React.FC = () => {
           <div className="flex items-center gap-4 mb-4">
             <button
               type="button"
-              onClick={() => navigate(`/templates/${templateId}`)}
+              onClick={() => navigate(`/holdings/${holdingId}`)}
               className="text-gray-600 hover:text-gray-900"
             >
               <svg
@@ -144,16 +194,14 @@ export const TemplateEdit: React.FC = () => {
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {currentTemplate?.template_name}の編集
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900">{currentHolding?.name}</h1>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setIsEditNameModalOpen(true)}>
-              テンプレート名を変更
+            <Button variant="secondary" onClick={openEditInfoModal}>
+              開催情報を編集
             </Button>
-            <Button variant="danger" onClick={handleDeleteTemplate}>
-              テンプレートを削除
+            <Button variant="danger" onClick={handleDeleteHolding}>
+              開催を削除
             </Button>
           </div>
         </div>
@@ -174,13 +222,13 @@ export const TemplateEdit: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {sortedTasks.map((task) => (
-              <div key={task.task_id} className="bg-white rounded-lg shadow-md p-6">
+              <div key={task.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900">{task.task_name}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">{task.name}</h3>
                       <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        {task.days_before}日前
+                        {task.daysBefore}日前
                       </span>
                     </div>
                     <p className="text-gray-600 whitespace-pre-wrap">{task.description}</p>
@@ -206,7 +254,7 @@ export const TemplateEdit: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleDeleteTask(task.task_id)}
+                      onClick={() => handleDeleteTask(task.id)}
                       className="text-red-600 hover:text-red-800 p-2"
                       title="削除"
                     >
@@ -230,25 +278,59 @@ export const TemplateEdit: React.FC = () => {
         )}
       </main>
 
-      {/* Edit Template Name Modal */}
+      {/* Edit Holding Info Modal */}
       <Modal
-        isOpen={isEditNameModalOpen}
-        onClose={() => setIsEditNameModalOpen(false)}
-        title="テンプレート名を変更"
+        isOpen={isEditInfoModalOpen}
+        onClose={() => setIsEditInfoModalOpen(false)}
+        title="開催情報を編集"
       >
         <div className="space-y-4">
           <Input
-            label="テンプレート名"
-            value={templateName}
-            onChange={(e) => setTemplateName(e.target.value)}
+            label="開催名"
+            value={holdingFormData.name}
+            onChange={(e) => setHoldingFormData({ ...holdingFormData, name: e.target.value })}
+            placeholder="開催名を入力"
           />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">開催日</label>
+            <DatePicker
+              selected={holdingFormData.date}
+              onChange={(date) =>
+                setHoldingFormData({ ...holdingFormData, date: date || new Date() })
+              }
+              dateFormat="yyyy年MM月dd日"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              minDate={new Date()}
+            />
+          </div>
+
+          <SearchableSelect
+            label="通知先チャンネル"
+            value={holdingFormData.channelId}
+            onChange={(value) => setHoldingFormData({ ...holdingFormData, channelId: value })}
+            options={[
+              { value: '', label: 'チャンネルを選択' },
+              ...traQChannels.map((c) => ({
+                value: c.id,
+                label: c.name,
+              })),
+            ]}
+            placeholder="チャンネルを検索..."
+          />
+
+          <Input
+            label="メンション先"
+            value={holdingFormData.mention}
+            onChange={(e) => setHoldingFormData({ ...holdingFormData, mention: e.target.value })}
+            placeholder="例: @運営, @here"
+          />
+
           <div className="flex gap-3 justify-end">
-            <Button variant="secondary" onClick={() => setIsEditNameModalOpen(false)}>
+            <Button variant="secondary" onClick={() => setIsEditInfoModalOpen(false)}>
               キャンセル
             </Button>
-            <Button onClick={handleUpdateTemplateName} disabled={templateName.trim() === ''}>
-              更新
-            </Button>
+            <Button onClick={handleUpdateHoldingInfo}>保存</Button>
           </div>
         </div>
       </Modal>
@@ -261,30 +343,26 @@ export const TemplateEdit: React.FC = () => {
       >
         <div className="space-y-4">
           <Input
-            label="タスク名 *"
+            label="タスク名"
+            value={taskFormData.name}
+            onChange={(e) => setTaskFormData({ ...taskFormData, name: e.target.value })}
             placeholder="例: ゲーム募集開始"
-            value={taskFormData.task_name}
-            onChange={(e) => setTaskFormData({ ...taskFormData, task_name: e.target.value })}
           />
           <Input
-            label="リマインド日数 (開催日の何日前) *"
+            label="日数（開催日の何日前か）"
             type="number"
-            min="1"
-            placeholder="例: 90"
-            value={taskFormData.days_before || ''}
+            value={taskFormData.daysBefore}
             onChange={(e) =>
-              setTaskFormData({
-                ...taskFormData,
-                days_before: parseInt(e.target.value, 10) || 0,
-              })
+              setTaskFormData({ ...taskFormData, daysBefore: Number(e.target.value) })
             }
+            placeholder="例: 90"
           />
           <Textarea
-            label="タスク詳細"
-            placeholder="タスクの詳細説明を入力..."
-            rows={5}
+            label="説明"
             value={taskFormData.description}
             onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+            placeholder="タスクの詳細を入力..."
+            rows={5}
           />
           <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={closeTaskModal}>

@@ -10,36 +10,36 @@ import { useAppStore } from '../store';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { templates, isLoading, fetchTemplates, searchTemplates, createTemplate } = useAppStore();
+  const { events, isLoading, fetchEvents, searchEvents, createEvent } = useAppStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newEventName, setNewEventName] = useState('');
 
   useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
 
     if (query.trim() === '') {
-      fetchTemplates();
+      fetchEvents();
     } else {
-      searchTemplates(query);
+      searchEvents(query);
     }
   };
 
-  const handleCreateTemplate = async () => {
-    if (newTemplateName.trim() === '') return;
+  const handleCreateEvent = async () => {
+    if (newEventName.trim() === '') return;
 
     try {
-      await createTemplate(newTemplateName);
+      await createEvent(newEventName);
       setIsCreateModalOpen(false);
-      setNewTemplateName('');
+      setNewEventName('');
     } catch (error) {
-      console.error('Failed to create template:', error);
+      console.error('Failed to create event:', error);
     }
   };
 
@@ -59,38 +59,33 @@ export const Dashboard: React.FC = () => {
           <div className="flex-1">
             <Input
               type="text"
-              placeholder="テンプレートを検索..."
+              placeholder="イベントを検索..."
               value={searchQuery}
               onChange={handleSearch}
               className="w-full"
             />
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>+ 新しいテンプレートを作成</Button>
+          <Button onClick={() => setIsCreateModalOpen(true)}>+ 新しいイベントを作成</Button>
         </div>
 
-        {/* Templates Grid */}
+        {/* Events Grid */}
         {isLoading ? (
           <LoadingSpinner />
-        ) : templates.length === 0 ? (
+        ) : events.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
               {searchQuery
-                ? 'テンプレートが見つかりませんでした'
-                : 'テンプレートがありません。新しく作成してください。'}
+                ? 'イベントが見つかりませんでした'
+                : 'イベントがありません。新しく作成してください。'}
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {templates.map((template) => (
-              <Card
-                key={template.template_id}
-                onClick={() => navigate(`/templates/${template.template_id}`)}
-              >
+            {events.map((event) => (
+              <Card key={event.id} onClick={() => navigate(`/events/${event.id}`)}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {template.template_name}
-                    </h3>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{event.name}</h3>
                     <p className="text-sm text-gray-500">クリックして詳細を表示</p>
                   </div>
                   <svg
@@ -111,33 +106,33 @@ export const Dashboard: React.FC = () => {
         )}
       </main>
 
-      {/* Create Template Modal */}
+      {/* Create Event Modal */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setNewTemplateName('');
+          setNewEventName('');
         }}
-        title="新しいテンプレートを作成"
+        title="新しいイベントを作成"
       >
         <div className="space-y-4">
           <Input
-            label="テンプレート名"
+            label="イベント名"
             placeholder="例: ゲーム展示イベント"
-            value={newTemplateName}
-            onChange={(e) => setNewTemplateName(e.target.value)}
+            value={newEventName}
+            onChange={(e) => setNewEventName(e.target.value)}
           />
           <div className="flex gap-3 justify-end">
             <Button
               variant="secondary"
               onClick={() => {
                 setIsCreateModalOpen(false);
-                setNewTemplateName('');
+                setNewEventName('');
               }}
             >
               キャンセル
             </Button>
-            <Button onClick={handleCreateTemplate} disabled={newTemplateName.trim() === ''}>
+            <Button onClick={handleCreateEvent} disabled={newEventName.trim() === ''}>
               作成
             </Button>
           </div>

@@ -8,6 +8,13 @@ body {
     "Open Sans", "Helvetica Neue", sans-serif;
 }
 
+/* Global placeholder styles */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af; /* gray-400 */
+  opacity: 1;
+}
+
 /* DatePicker custom styles */
 .react-datepicker-wrapper {
   width: 100%;
@@ -15,4 +22,10 @@ body {
 
 .react-datepicker__input-container {
   width: 100%;
+}
+
+/* DatePicker placeholder styles */
+.react-datepicker__input-container input::placeholder {
+  color: #9ca3af; /* gray-400 */
+  opacity: 1;
 }

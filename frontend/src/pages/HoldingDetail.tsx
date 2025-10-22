@@ -5,51 +5,45 @@ import { Button } from '../components/Button';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { useAppStore } from '../store';
 
-export const EventDetail: React.FC = () => {
-  const { eventId } = useParams<{ eventId: string }>();
+export const HoldingDetail: React.FC = () => {
+  const { holdingId } = useParams<{ holdingId: string }>();
   const navigate = useNavigate();
-  const { events, currentTemplate, isLoading, fetchEvents, fetchTemplateById } = useAppStore();
-
-  const event = events.find((e) => e.event_id === eventId);
+  const { currentHolding, isLoading, fetchHoldingById } = useAppStore();
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
-
-  useEffect(() => {
-    if (event?.template_id) {
-      fetchTemplateById(event.template_id);
+    if (holdingId) {
+      fetchHoldingById(holdingId);
     }
-  }, [event?.template_id, fetchTemplateById]);
+  }, [holdingId, fetchHoldingById]);
 
-  if (!eventId) {
-    return <div>イベントIDが指定されていません</div>;
+  if (!holdingId) {
+    return <div>開催IDが指定されていません</div>;
   }
 
-  if (isLoading && !event) {
+  if (isLoading && !currentHolding) {
     return <LoadingSpinner />;
   }
 
-  if (!event) {
+  if (!currentHolding) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">イベントが見つかりません</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">開催が見つかりません</h2>
           <Button onClick={() => navigate('/')}>ダッシュボードに戻る</Button>
         </div>
       </div>
     );
   }
 
-  const eventDate = new Date(event.event_date);
+  const holdingDate = new Date(currentHolding.date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const isPast = eventDate < today;
-  const daysUntil = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const isPast = holdingDate < today;
+  const daysUntil = Math.ceil((holdingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   // タスクを日数順にソート
-  const sortedTasks = currentTemplate?.tasks
-    ? [...currentTemplate.tasks].sort((a, b) => b.days_before - a.days_before)
+  const sortedTasks = currentHolding.tasks
+    ? [...currentHolding.tasks].sort((a, b) => b.daysBefore - a.daysBefore)
     : [];
 
   return (
@@ -60,7 +54,7 @@ export const EventDetail: React.FC = () => {
           <div className="flex items-center gap-4 mb-4">
             <button
               type="button"
-              onClick={() => navigate(`/templates/${event.template_id}`)}
+              onClick={() => navigate(`/events/${currentHolding.eventId}`)}
               className="text-gray-600 hover:text-gray-900"
             >
               <svg
@@ -75,11 +69,11 @@ export const EventDetail: React.FC = () => {
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <h1 className="text-3xl font-bold text-gray-900">{event.event_name}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{currentHolding.name}</h1>
           </div>
           <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => navigate(`/events/${eventId}/edit`)}>
-              イベントを編集
+            <Button variant="secondary" onClick={() => navigate(`/holdings/${holdingId}/edit`)}>
+              開催を編集・タスク管理
             </Button>
           </div>
         </div>
@@ -87,19 +81,19 @@ export const EventDetail: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Event Info Card */}
+        {/* Holding Info Card */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">イベント情報</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">開催情報</h2>
           <div className="space-y-3">
             <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">テンプレート:</span>
-              <span className="text-gray-900">{event.template_name}</span>
+              <span className="font-medium text-gray-700 w-32">イベント:</span>
+              <span className="text-gray-900">{currentHolding.event_name || '読み込み中...'}</span>
             </div>
             <div className="flex items-start">
               <span className="font-medium text-gray-700 w-32">開催日:</span>
               <div>
                 <span className="text-gray-900">
-                  {eventDate.toLocaleDateString('ja-JP', {
+                  {holdingDate.toLocaleDateString('ja-JP', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -120,11 +114,11 @@ export const EventDetail: React.FC = () => {
             </div>
             <div className="flex items-start">
               <span className="font-medium text-gray-700 w-32">通知先:</span>
-              <span className="text-gray-900">{event.slack_mention}</span>
+              <span className="text-gray-900">{currentHolding.mention}</span>
             </div>
             <div className="flex items-start">
               <span className="font-medium text-gray-700 w-32">チャンネルID:</span>
-              <span className="text-gray-600 font-mono text-sm">{event.slack_channel_id}</span>
+              <span className="text-gray-600 font-mono text-sm">{currentHolding.channelId}</span>
             </div>
           </div>
         </div>
@@ -134,14 +128,12 @@ export const EventDetail: React.FC = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-6">タスクスケジュール</h2>
 
           {sortedTasks.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              このテンプレートにはタスクが登録されていません
-            </p>
+            <p className="text-gray-500 text-center py-8">この開催にはタスクが登録されていません</p>
           ) : (
             <div className="space-y-6">
               {sortedTasks.map((task, index) => {
-                const taskDate = new Date(eventDate);
-                taskDate.setDate(taskDate.getDate() - task.days_before);
+                const taskDate = new Date(holdingDate);
+                taskDate.setDate(taskDate.getDate() - task.daysBefore);
                 const isTaskPast = taskDate < today;
                 const isTaskToday = taskDate.toDateString() === today.toDateString();
                 const daysUntilTask = Math.ceil(
@@ -149,7 +141,7 @@ export const EventDetail: React.FC = () => {
                 );
 
                 return (
-                  <div key={task.task_id} className="relative">
+                  <div key={task.id} className="relative">
                     {/* Timeline line */}
                     {index !== sortedTasks.length - 1 && (
                       <div className="absolute left-4 top-12 w-0.5 h-full bg-gray-200" />
@@ -189,11 +181,9 @@ export const EventDetail: React.FC = () => {
                       <div className="flex-1 pb-8">
                         <div className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-start justify-between mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {task.task_name}
-                            </h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{task.name}</h3>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
-                              {task.days_before}日前
+                              {task.daysBefore}日前
                             </span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
