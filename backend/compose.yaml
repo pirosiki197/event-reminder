@@ -1,0 +1,40 @@
+services:
+  reminder:
+    build: .
+    container_name: reminder
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_NAME=reminder
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_HOST=db
+      - DB_PORT=3306
+      - REMIND_INTERVAL=1m
+      - TZ=Asia/Tokyo
+
+  migrate:
+    build: ./migration
+    container_name: migrate
+    environment:
+      - DB_NAME=reminder
+      - DB_USER=root
+      - DB_PASSWORD=root
+      - DB_HOST=db
+      - DB_PORT=3306
+
+  db:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=reminder
+    ports:
+      - "3306:3306"
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8081:8080"
