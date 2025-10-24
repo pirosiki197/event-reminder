@@ -1,10 +1,10 @@
-FROM golang:1-alpine AS builder
+FROM golang:1.25-trixie AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY . .
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 go build -tags timetzdata -trimpath -o reminder .
+    CGO_ENABLED=0 go build -trimpath -o reminder .
 
 FROM gcr.io/distroless/static-debian12
 WORKDIR /app
