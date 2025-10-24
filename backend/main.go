@@ -33,6 +33,7 @@ func main() {
 		DBName:               os.Getenv("DB_NAME"),
 		ParseTime:            true,
 		AllowNativePasswords: true,
+		Loc:                  time.Local,
 	}
 	db, err := sqlx.Open("mysql", dbConf.FormatDSN())
 	if err != nil {
