@@ -7,6 +7,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/motoki317/sc v1.8.2
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/samber/slog-chi v1.11.1
 	github.com/traPtitech/go-traq v0.0.0-20240725071454-97c7b85dc879
 )

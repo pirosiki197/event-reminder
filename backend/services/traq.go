@@ -77,3 +77,14 @@ func buildChannelList(parent traq.Channel, path string, channelByID map[string]t
 		buildChannelList(channel, newPath, channelByID, res)
 	}
 }
+
+func (s *TraQService) PostMessage(ctx context.Context, channelID string, content string) error {
+	_, _, err := s.client.MessageApi.
+		PostMessage(ctx, channelID).
+		PostMessageRequest(traq.PostMessageRequest{
+			Content: content,
+			Embed:   newBool(true),
+		}).
+		Execute()
+	return err
+}

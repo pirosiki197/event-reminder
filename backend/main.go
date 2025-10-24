@@ -49,12 +49,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = services.NewRemindService(taskService, logger, traqClient, services.RemindConfig{
+	remindService := services.NewRemindService(taskService, logger, traqClient, services.RemindConfig{
 		TraqToken: os.Getenv("TRAQ_TOKEN"),
 		ChannelID: os.Getenv("REMIND_CHANNEL_ID"),
 		Interval:  interval,
 	})
-	// go remindService.Start()
+	remindService.Start()
 
 	h := handler.New(taskService, traqService, logger)
 	r := chi.NewRouter()

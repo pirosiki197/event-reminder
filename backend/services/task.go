@@ -371,7 +371,7 @@ func (s *TaskService) DeleteTask(id int) error {
 // ========================================
 
 // Bot用: リマインドすべきタスクを取得
-func (s *TaskService) GetTasksToRemindToday() ([]models.Task, error) {
+func (s *TaskService) GetTasksToRemind() ([]models.Task, error) {
 	var tasks []models.Task
 	query := `
 		SELECT t.*

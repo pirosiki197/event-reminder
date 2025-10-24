@@ -6,14 +6,17 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/pirosiki197/event_reminder/models"
+	"github.com/robfig/cron/v3"
 	"github.com/traPtitech/go-traq"
 )
 
 type RemindService struct {
-	ts     *TaskService
-	client *traq.APIClient
-	logger *slog.Logger
-	conf   RemindConfig
+	taskSvc *TaskService
+	traqSvc *TraQService
+	client  *traq.APIClient
+	logger  *slog.Logger
+	conf    RemindConfig
 }
 
 type RemindConfig struct {
@@ -24,50 +27,39 @@ type RemindConfig struct {
 
 func NewRemindService(ts *TaskService, logger *slog.Logger, client *traq.APIClient, conf RemindConfig) *RemindService {
 	return &RemindService{
-		ts:     ts,
-		client: client,
-		logger: logger,
-		conf:   conf,
+		taskSvc: ts,
+		client:  client,
+		logger:  logger,
+		conf:    conf,
 	}
 }
 
 func (rs *RemindService) Start() {
-	ticker := time.NewTicker(rs.conf.Interval)
-	for range ticker.C {
-		reminds, err := []Remind{}, (error)(nil) // TODO
+	c := cron.New()
+	c.AddFunc("0 8 * * *", func() {
+		tasks, err := rs.taskSvc.GetTasksToRemind()
 		if err != nil {
 			rs.logger.Error("failed to get pending reminds", slog.String("err", err.Error()))
-			continue
+			return
 		}
 
-		for _, remind := range reminds {
-			err := rs.sendRemind(remind)
+		for _, task := range tasks {
+			event, err := rs.taskSvc.GetHoldingByID(task.HoldingID)
+			if err != nil {
+				rs.logger.Error("failed to get holding info", slog.String("err", err.Error()))
+				return
+			}
+			err = rs.sendRemind(context.Background(), task, event)
 			if err != nil {
 				rs.logger.Error("failed to send remind", slog.String("err", err.Error()))
 			}
 		}
-	}
+	})
 }
 
-type Remind struct {
-	channelID string
-	mention   string
-	taskID    int
-}
-
-func (rs *RemindService) sendRemind(remind Remind) error {
-	task, err := rs.ts.GetTaskByID(remind.taskID)
-	if err != nil {
-		return err
-	}
-
-	auth := context.WithValue(context.Background(), traq.ContextAccessToken, rs.conf.TraqToken)
-	_, _, err = rs.client.MessageApi.
-		PostMessage(auth, rs.conf.ChannelID).
-		PostMessageRequest(traq.PostMessageRequest{
-			Content: fmt.Sprintf("@%s %s", remind.mention, task.Name),
-			Embed:   newBool(true),
-		}).Execute()
+func (rs *RemindService) sendRemind(ctx context.Context, task models.Task, holding models.Holding) error {
+	content := fmt.Sprintf("@%s %s", holding.Mention, task.Name)
+	err := rs.traqSvc.PostMessage(ctx, holding.ChannelID, content)
 	if err != nil {
 		return err
 	}
