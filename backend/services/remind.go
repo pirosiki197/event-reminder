@@ -47,11 +47,17 @@ func (rs *RemindService) Start() {
 			event, err := rs.taskSvc.GetHoldingByID(task.HoldingID)
 			if err != nil {
 				rs.logger.Error("failed to get holding info", slog.String("err", err.Error()))
-				return
+				continue
 			}
 			err = rs.sendRemind(context.Background(), task, event)
 			if err != nil {
 				rs.logger.Error("failed to send remind", slog.String("err", err.Error()))
+				continue
+			}
+			err = rs.taskSvc.UpdateTaskAsReminded(task.ID)
+			if err != nil {
+				rs.logger.Error("failed to update task status", slog.String("err", err.Error()))
+				continue
 			}
 		}
 	})

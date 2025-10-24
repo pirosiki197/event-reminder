@@ -2,6 +2,7 @@ package services
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pirosiki197/event_reminder/models"
@@ -372,14 +373,15 @@ func (s *TaskService) DeleteTask(id int) error {
 
 // Bot用: リマインドすべきタスクを取得
 func (s *TaskService) GetTasksToRemind() ([]models.Task, error) {
+	now := time.Now()
 	var tasks []models.Task
 	query := `
 		SELECT t.*
 		FROM tasks t
 		INNER JOIN holdings h ON t.holding_id = h.id
-		WHERE DATE_SUB(h.date, INTERVAL t.days_before DAY) <= CURDATE()
+		WHERE DATE_SUB(h.date, INTERVAL t.days_before DAY) <= ? AND t.reminded = false
 	`
-	err := s.db.Select(&tasks, query)
+	err := s.db.Select(&tasks, query, now)
 	return tasks, err
 }
 
