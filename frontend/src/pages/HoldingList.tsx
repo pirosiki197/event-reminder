@@ -59,7 +59,7 @@ export const HoldingList: React.FC = () => {
           </div>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => navigate(`/events/${eventId}/edit`)}>
-              イベントを編集
+              イベント・タスクを編集
             </Button>
           </div>
         </div>

@@ -3,18 +3,21 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { useChannelName } from '../hooks/useChannelName';
 import { useAppStore } from '../store';
 
 export const HoldingDetail: React.FC = () => {
   const { holdingId } = useParams<{ holdingId: string }>();
   const navigate = useNavigate();
-  const { currentHolding, isLoading, fetchHoldingById } = useAppStore();
+  const { currentHolding, isLoading, fetchHoldingById, fetchTraQChannels } = useAppStore();
+  const channelName = useChannelName(currentHolding?.channelId || '');
 
   useEffect(() => {
     if (holdingId) {
       fetchHoldingById(holdingId);
     }
-  }, [holdingId, fetchHoldingById]);
+    fetchTraQChannels();
+  }, [holdingId, fetchHoldingById, fetchTraQChannels]);
 
   if (!holdingId) {
     return <div>開催IDが指定されていません</div>;
@@ -117,8 +120,8 @@ export const HoldingDetail: React.FC = () => {
               <span className="text-gray-900">{currentHolding.mention}</span>
             </div>
             <div className="flex items-start">
-              <span className="font-medium text-gray-700 w-32">チャンネルID:</span>
-              <span className="text-gray-600 font-mono text-sm">{currentHolding.channelId}</span>
+              <span className="font-medium text-gray-700 w-32">通知先チャンネル:</span>
+              <span className="text-gray-900">#{channelName}</span>
             </div>
           </div>
         </div>
