@@ -39,6 +39,7 @@ export const HoldingDetail: React.FC = () => {
   }
 
   const holdingDate = new Date(currentHolding.date);
+  holdingDate.setHours(0, 0, 0, 0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const isPast = holdingDate < today;
