@@ -1,7 +1,6 @@
 package main
 
 import (
-	"cmp"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -46,15 +45,7 @@ func main() {
 	taskService := services.NewTaskService(db, logger)
 	traqService := services.NewTraQService(traqClient)
 
-	interval, err := time.ParseDuration(cmp.Or(os.Getenv("REMIND_INTERVAL"), "12h"))
-	if err != nil {
-		panic(err)
-	}
-	remindService := services.NewRemindService(taskService, logger, traqClient, services.RemindConfig{
-		TraqToken: os.Getenv("TRAQ_TOKEN"),
-		ChannelID: os.Getenv("REMIND_CHANNEL_ID"),
-		Interval:  interval,
-	})
+	remindService := services.NewRemindService(taskService, logger, traqClient)
 	remindService.Start()
 
 	h := handler.New(taskService, traqService, logger)

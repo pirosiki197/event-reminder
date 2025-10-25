@@ -88,3 +88,7 @@ func (s *TraQService) PostMessage(ctx context.Context, channelID string, content
 		Execute()
 	return err
 }
+
+func newBool(b bool) *bool {
+	return &b
+}
