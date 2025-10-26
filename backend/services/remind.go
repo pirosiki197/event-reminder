@@ -17,9 +17,10 @@ type RemindService struct {
 	logger  *slog.Logger
 }
 
-func NewRemindService(ts *TaskService, logger *slog.Logger, client *traq.APIClient) *RemindService {
+func NewRemindService(taskSvc *TaskService, traqSvc *TraQService, logger *slog.Logger, client *traq.APIClient) *RemindService {
 	return &RemindService{
-		taskSvc: ts,
+		taskSvc: taskSvc,
+		traqSvc: traqSvc,
 		client:  client,
 		logger:  logger,
 	}

@@ -45,7 +45,7 @@ func main() {
 	taskService := services.NewTaskService(db, logger)
 	traqService := services.NewTraQService(traqClient)
 
-	remindService := services.NewRemindService(taskService, logger, traqClient)
+	remindService := services.NewRemindService(taskService, traqService, logger, traqClient)
 	remindService.Start()
 
 	h := handler.New(taskService, traqService, logger)
