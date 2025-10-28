@@ -41,12 +41,6 @@ func (h *Handler) SetupRoutes(router chi.Router) {
 	api.Put("/events/{eventId}", h.UpdateEvent)
 	api.Delete("/events/{eventId}", h.DeleteEvent)
 
-	// DefaultTasks (デフォルトタスク - イベントに紐づく)
-	api.Get("/events/{eventId}/default-tasks", h.GetDefaultTasks)
-	api.Post("/events/{eventId}/default-tasks", h.CreateDefaultTask)
-	api.Patch("/default-tasks/{taskId}", h.UpdateDefaultTask)
-	api.Delete("/default-tasks/{taskId}", h.DeleteDefaultTask)
-
 	// Holdings (開催)
 	api.Post("/holdings", h.CreateHolding)
 	api.Get("/holdings", h.GetHoldings)

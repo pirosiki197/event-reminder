@@ -1,17 +1,11 @@
 import { create } from 'zustand';
-import { defaultTaskApi, eventApi, holdingApi, holdingTaskApi, traqApi } from '../api/api';
-import type {
-  Event,
-  EventWithTasks,
-  HoldingWithEvent,
-  HoldingWithTasks,
-  TraQChannel,
-} from '../types';
+import { eventApi, holdingApi, holdingTaskApi, traqApi } from '../api/api';
+import type { Event, HoldingWithEvent, HoldingWithTasks, TraQChannel } from '../types';
 
 interface AppState {
   // データ
   events: Event[];
-  currentEvent: EventWithTasks | null;
+  currentEvent: Event | null;
   holdings: HoldingWithEvent[];
   currentHolding: HoldingWithTasks | null;
   traQChannels: TraQChannel[];
@@ -26,23 +20,6 @@ interface AppState {
   createEvent: (name: string) => Promise<Event>;
   updateEvent: (eventId: string, name: string) => Promise<void>;
   deleteEvent: (eventId: string) => Promise<void>;
-
-  // アクション: デフォルトタスク (旧: タスクテンプレート)
-  createDefaultTask: (task: {
-    eventId: string;
-    name: string;
-    daysBefore: number;
-    description: string;
-  }) => Promise<void>;
-  updateDefaultTask: (
-    taskId: string,
-    updates: {
-      name?: string;
-      daysBefore?: number;
-      description?: string;
-    }
-  ) => Promise<void>;
-  deleteDefaultTask: (taskId: string) => Promise<void>;
 
   // アクション: 開催 (旧: イベント)
   fetchHoldings: () => Promise<void>;
@@ -178,66 +155,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Failed to delete event:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  // デフォルトタスク関連 (旧: タスクテンプレート)
-  createDefaultTask: async (task) => {
-    set({ isLoading: true });
-    try {
-      const newTask = await defaultTaskApi.create(task);
-      set((state) => ({
-        currentEvent: state.currentEvent
-          ? {
-              ...state.currentEvent,
-              tasks: [...state.currentEvent.tasks, newTask],
-            }
-          : null,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to create default task:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  updateDefaultTask: async (taskId, updates) => {
-    set({ isLoading: true });
-    try {
-      const updated = await defaultTaskApi.update(taskId, updates);
-      if (updated) {
-        set((state) => ({
-          currentEvent: state.currentEvent
-            ? {
-                ...state.currentEvent,
-                tasks: state.currentEvent.tasks.map((t) => (t.id === taskId ? updated : t)),
-              }
-            : null,
-          isLoading: false,
-        }));
-      }
-    } catch (error) {
-      console.error('Failed to update default task:', error);
-      set({ isLoading: false });
-    }
-  },
-
-  deleteDefaultTask: async (taskId) => {
-    set({ isLoading: true });
-    try {
-      await defaultTaskApi.delete(taskId);
-      set((state) => ({
-        currentEvent: state.currentEvent
-          ? {
-              ...state.currentEvent,
-              tasks: state.currentEvent.tasks.filter((t) => t.id !== taskId),
-            }
-          : null,
-        isLoading: false,
-      }));
-    } catch (error) {
-      console.error('Failed to delete default task:', error);
       set({ isLoading: false });
     }
   },

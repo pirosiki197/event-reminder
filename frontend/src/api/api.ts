@@ -1,7 +1,5 @@
 import type {
-  DefaultTask,
   Event,
-  EventWithTasks,
   Holding,
   HoldingTask,
   HoldingWithEvent,
@@ -44,13 +42,8 @@ export const eventApi = {
     return fetchJSON<Event[]>(url);
   },
 
-  getById: async (eventId: string): Promise<EventWithTasks> => {
-    const event = await fetchJSON<Event>(`${API_BASE_URL}/events/${eventId}`);
-    const tasks = await defaultTaskApi.getByEventId(eventId);
-    return {
-      ...event,
-      tasks,
-    };
+  getById: async (eventId: string): Promise<Event> => {
+    return fetchJSON<Event>(`${API_BASE_URL}/events/${eventId}`);
   },
 
   create: async (name: string): Promise<Event> => {
@@ -69,49 +62,6 @@ export const eventApi = {
 
   delete: async (eventId: string): Promise<void> => {
     await fetchJSON<void>(`${API_BASE_URL}/events/${eventId}`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// DefaultTasks API
-export const defaultTaskApi = {
-  getByEventId: async (eventId: string): Promise<DefaultTask[]> => {
-    return fetchJSON<DefaultTask[]>(`${API_BASE_URL}/events/${eventId}/default-tasks`);
-  },
-
-  create: async (task: {
-    eventId: string;
-    name: string;
-    daysBefore: number;
-    description: string;
-  }): Promise<DefaultTask> => {
-    return fetchJSON<DefaultTask>(`${API_BASE_URL}/events/${task.eventId}/default-tasks`, {
-      method: 'POST',
-      body: JSON.stringify({
-        name: task.name,
-        daysBefore: task.daysBefore,
-        description: task.description,
-      }),
-    });
-  },
-
-  update: async (
-    taskId: string,
-    updates: {
-      name?: string;
-      daysBefore?: number;
-      description?: string;
-    }
-  ): Promise<DefaultTask> => {
-    return fetchJSON<DefaultTask>(`${API_BASE_URL}/default-tasks/${taskId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-  },
-
-  delete: async (taskId: string): Promise<void> => {
-    await fetchJSON<void>(`${API_BASE_URL}/default-tasks/${taskId}`, {
       method: 'DELETE',
     });
   },

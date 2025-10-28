@@ -4,15 +4,6 @@ export interface Event {
   name: string;
 }
 
-// デフォルトタスク (旧: TaskTemplate)
-export interface DefaultTask {
-  id: string;
-  eventId: string;
-  name: string;
-  daysBefore: number;
-  description: string;
-}
-
 // 開催 (旧: Event)
 export interface Holding {
   id: string;
@@ -36,11 +27,6 @@ export interface HoldingTask {
 export interface TraQChannel {
   id: string;
   name: string;
-}
-
-// イベントとデフォルトタスクを結合した型
-export interface EventWithTasks extends Event {
-  tasks: DefaultTask[];
 }
 
 // 開催とイベント情報を結合した型

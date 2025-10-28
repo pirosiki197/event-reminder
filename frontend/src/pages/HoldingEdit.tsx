@@ -198,10 +198,10 @@ export const HoldingEdit: React.FC = () => {
           </div>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={openEditInfoModal}>
-              開催情報を編集
+              編集
             </Button>
             <Button variant="danger" onClick={handleDeleteHolding}>
-              開催を削除
+              削除
             </Button>
           </div>
         </div>

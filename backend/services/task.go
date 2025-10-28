@@ -94,83 +94,6 @@ func (s *TaskService) DeleteEvent(id int) error {
 }
 
 // ========================================
-// DefaultTasks (デフォルトタスク) - CRUD
-// ========================================
-
-func (s *TaskService) CreateDefaultTask(task models.DefaultTask) (int, error) {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	result, err := tx.Exec(
-		"INSERT INTO `default_tasks` (`event_id`, `name`, `days_before`, `description`) VALUES (?, ?, ?, ?)",
-		task.EventID,
-		task.Name,
-		task.DaysBefore,
-		task.Description,
-	)
-	if err != nil {
-		s.logger.Error("failed to create default task", slog.String("err", err.Error()))
-		return 0, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return 0, err
-	}
-
-	return int(id), nil
-}
-
-func (s *TaskService) GetDefaultTaskByID(id int) (models.DefaultTask, error) {
-	var task models.DefaultTask
-	err := s.db.Get(&task, "SELECT * FROM `default_tasks` WHERE `id` = ?", id)
-	return task, err
-}
-
-func (s *TaskService) GetDefaultTasks(eventID int) ([]models.DefaultTask, error) {
-	var tasks []models.DefaultTask
-	err := s.db.Select(&tasks, "SELECT * FROM `default_tasks` WHERE `event_id` = ? ORDER BY `days_before` DESC", eventID)
-	return tasks, err
-}
-
-func (s *TaskService) UpdateDefaultTask(id int, task models.DefaultTask) error {
-	tx, err := s.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(
-		"UPDATE `default_tasks` SET `name` = ?, `days_before` = ?, `description` = ? WHERE `id` = ?",
-		task.Name,
-		task.DaysBefore,
-		task.Description,
-		id,
-	)
-	if err != nil {
-		s.logger.Error("failed to update default task", slog.String("err", err.Error()))
-		return err
-	}
-
-	return tx.Commit()
-}
-
-func (s *TaskService) DeleteDefaultTask(id int) error {
-	_, err := s.db.Exec("DELETE FROM `default_tasks` WHERE `id` = ?", id)
-	if err != nil {
-		s.logger.Error("failed to delete default task", slog.String("err", err.Error()))
-	}
-	return err
-}
-
-// ========================================
 // Holdings (開催) - CRUD
 // ========================================
 
@@ -199,26 +122,37 @@ func (s *TaskService) CreateHolding(holding models.Holding) (int, error) {
 		return 0, err
 	}
 
-	// DefaultTasksをコピーしてHoldingTasksを作成
-	defaultTasks, err := s.GetDefaultTasks(holding.EventID)
-	if err != nil {
-		s.logger.Error("failed to get default tasks", slog.String("err", err.Error()))
-		return 0, err
-	}
+	// 同じイベントIDの最新のholdingからタスクをコピー
+	var latestHoldingID int
+	err = tx.Get(&latestHoldingID,
+		"SELECT `id` FROM `holdings` WHERE `event_id` = ? AND `id` != ? ORDER BY `date` DESC LIMIT 1",
+		holding.EventID,
+		holdingID,
+	)
 
-	for _, task := range defaultTasks {
-		_, err = tx.Exec(
-			"INSERT INTO `tasks` (`holding_id`, `name`, `days_before`, `description`) VALUES (?, ?, ?, ?)",
-			holdingID,
-			task.Name,
-			task.DaysBefore,
-			task.Description,
-		)
+	// 最新のholdingが存在する場合のみタスクをコピー
+	if err == nil {
+		var tasks []models.Task
+		err = tx.Select(&tasks, "SELECT * FROM `tasks` WHERE `holding_id` = ?", latestHoldingID)
 		if err != nil {
-			s.logger.Error("failed to copy task to holding", slog.String("err", err.Error()))
+			s.logger.Error("failed to get tasks from latest holding", slog.String("err", err.Error()))
 			return 0, err
 		}
+		for _, task := range tasks {
+			_, err = tx.Exec(
+				"INSERT INTO `tasks` (`holding_id`, `name`, `days_before`, `description`) VALUES (?, ?, ?, ?)",
+				holdingID,
+				task.Name,
+				task.DaysBefore,
+				task.Description,
+			)
+			if err != nil {
+				s.logger.Error("failed to copy task to holding", slog.String("err", err.Error()))
+				return 0, err
+			}
+		}
 	}
+	// 最新のholdingが存在しない場合は何もせず（タスクなしで作成）
 
 	if err := tx.Commit(); err != nil {
 		return 0, err

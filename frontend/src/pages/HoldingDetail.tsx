@@ -77,7 +77,7 @@ export const HoldingDetail: React.FC = () => {
           </div>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={() => navigate(`/holdings/${holdingId}/edit`)}>
-              開催を編集・タスク管理
+              開催情報を編集・タスク管理
             </Button>
           </div>
         </div>
