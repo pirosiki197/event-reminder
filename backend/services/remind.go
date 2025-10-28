@@ -59,7 +59,7 @@ func (rs *RemindService) Start() {
 }
 
 func (rs *RemindService) sendRemind(ctx context.Context, task models.Task, holding models.Holding) error {
-	content := fmt.Sprintf("@%s %s", holding.Mention, task.Name)
+	content := fmt.Sprintf("%s %s", holding.Mention, task.Name)
 	err := rs.traqSvc.PostMessage(ctx, holding.ChannelID, content)
 	if err != nil {
 		return err

@@ -31,7 +31,8 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleCreateEvent = async () => {
+  const handleCreateEvent = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (newEventName.trim() === '') return;
 
     try {
@@ -115,7 +116,7 @@ export const Dashboard: React.FC = () => {
         }}
         title="新しいイベントを作成"
       >
-        <div className="space-y-4">
+        <form onSubmit={handleCreateEvent} className="space-y-4">
           <Input
             label="イベント名"
             placeholder="例: ゲーム展示イベント"
@@ -124,6 +125,7 @@ export const Dashboard: React.FC = () => {
           />
           <div className="flex gap-3 justify-end">
             <Button
+              type="button"
               variant="secondary"
               onClick={() => {
                 setIsCreateModalOpen(false);
@@ -132,11 +134,11 @@ export const Dashboard: React.FC = () => {
             >
               キャンセル
             </Button>
-            <Button onClick={handleCreateEvent} disabled={newEventName.trim() === ''}>
+            <Button type="submit" disabled={newEventName.trim() === ''}>
               作成
             </Button>
           </div>
-        </div>
+        </form>
       </Modal>
     </div>
   );
